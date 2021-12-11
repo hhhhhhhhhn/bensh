@@ -1,0 +1,25 @@
+#!/bin/sh
+if [ -z "$1" ] || [ -z "$2" ]; then
+	echo "usage: bensh FILE SHELL1,SHELL2,... [ITERATIONS] [COPIES]" >&2
+	exit 1
+fi
+
+[ -z $3 ] && iterations=100 || iterations="$3"
+[ -z $4 ] && copies=100 || copies="$4"
+
+file="$(mktemp /tmp/benshXXXXXX)"
+
+for i in $(seq "$copies"); do
+	cat "$1" >> "$file"
+done
+
+for shell in $(echo "$2" | tr "," "\n"); do
+	$shell "$file" >/dev/null # cold start
+	start="$(date +%s%N)"
+	for i in $(seq "$iterations"); do
+		$shell "$file" > /dev/null
+	done
+	echo "$shell: $(echo "scale=5; ( $(date +%s%N) - $start) / 1000000000" | bc)s"
+done
+
+rm "$file"
